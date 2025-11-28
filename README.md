@@ -49,6 +49,10 @@ Add this line to your `.tmux.conf`:
 
 Reload TMUX environment with `$ tmux source ~/.tmux.conf`.
 
+### Nix/NixOS
+
+Beginning with release `25.11` this plugin is also available in `nixpkgs` as `tmuxPlugins.tmux-session-manager`.
+
 ## Configuration
 
 You can customize the plugin by setting the following options in your `.tmux.conf`:
