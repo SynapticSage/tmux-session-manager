@@ -7,8 +7,6 @@
 #   - Running sessions (can move window there directly via tmux)
 #   - Saved-but-inactive sessions (marked with [saved], saves to file)
 
-set -euo pipefail
-
 cd "$(dirname "${BASH_SOURCE[0]}")" || exit
 source common_utils.sh
 
@@ -34,7 +32,8 @@ select_target() {
 	fi
 
 	if command -v fzf &>/dev/null; then
-		echo "$targets" | column -t -s $'\t' | fzf --prompt="Move '$CURRENT_WINDOW_NAME' to: " --height=40% --reverse
+		# Use fzf; if user cancels, fzf returns non-zero but we handle it
+		echo "$targets" | column -t -s $'\t' | fzf --prompt="Move '$CURRENT_WINDOW_NAME' to: " --height=40% --reverse || true
 	else
 		# Fallback to select menu
 		PS3="Select target (0 to cancel): "

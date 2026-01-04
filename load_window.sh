@@ -7,8 +7,6 @@
 #   --copy    Keep window in source file after loading (copy semantics)
 #             Default is move semantics (removes from source)
 
-set -euo pipefail
-
 cd "$(dirname "${BASH_SOURCE[0]}")" || exit
 source common_utils.sh
 
@@ -36,7 +34,7 @@ select_source_session() {
 	fi
 
 	if command -v fzf &>/dev/null; then
-		echo "$sessions" | fzf --prompt="Load from session: " --height=40% --reverse
+		echo "$sessions" | fzf --prompt="Load from session: " --height=40% --reverse || true
 	else
 		PS3="Select session (0 to cancel): "
 		local IFS=$'\n'
@@ -66,7 +64,7 @@ select_window() {
 	fi
 
 	if command -v fzf &>/dev/null; then
-		echo "$windows" | fzf --prompt="Select window: " --height=40% --reverse
+		echo "$windows" | fzf --prompt="Select window: " --height=40% --reverse || true
 	else
 		PS3="Select window (0 to cancel): "
 		local IFS=$'\n'
