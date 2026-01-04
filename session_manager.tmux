@@ -59,3 +59,33 @@ bindings=$(get_tmux_option "@session-manager-delete-key-root" "")
 for key in $bindings; do
 	tmux bind-key -n "$key" run-shell "tmux display-popup -E '$(pwd)/delete_session.sh'"
 done
+
+# Move Window (to running or saved session)
+bindings=$(get_tmux_option "@session-manager-move-window-key" "C-w")
+for key in $bindings; do
+	tmux bind-key "$key" run-shell "tmux display-popup -E '$(pwd)/move_window.sh'"
+done
+bindings=$(get_tmux_option "@session-manager-move-window-key-root" "")
+for key in $bindings; do
+	tmux bind-key -n "$key" run-shell "tmux display-popup -E '$(pwd)/move_window.sh'"
+done
+
+# Load Window (from saved session, move semantics)
+bindings=$(get_tmux_option "@session-manager-load-window-key" "C-y")
+for key in $bindings; do
+	tmux bind-key "$key" run-shell "tmux display-popup -E '$(pwd)/load_window.sh'"
+done
+bindings=$(get_tmux_option "@session-manager-load-window-key-root" "")
+for key in $bindings; do
+	tmux bind-key -n "$key" run-shell "tmux display-popup -E '$(pwd)/load_window.sh'"
+done
+
+# Load Window Copy (from saved session, copy semantics)
+bindings=$(get_tmux_option "@session-manager-load-window-copy-key" "")
+for key in $bindings; do
+	tmux bind-key "$key" run-shell "tmux display-popup -E '$(pwd)/load_window.sh --copy'"
+done
+bindings=$(get_tmux_option "@session-manager-load-window-copy-key-root" "")
+for key in $bindings; do
+	tmux bind-key -n "$key" run-shell "tmux display-popup -E '$(pwd)/load_window.sh --copy'"
+done

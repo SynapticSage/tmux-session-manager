@@ -1,10 +1,56 @@
-# Tmux Session Manager
+# Tmux Session Manager (Extended)
+
+> Fork of [PhilVoel/tmux-session-manager](https://github.com/PhilVoel/tmux-session-manager) with **window-level operations**.
 
 We all love tmux. But whenever you close a session (for instance, by restarting your system), you lose all the windows, panes and programs you had open.\
 The easy solution: Just save the entire tmux environment and restore it (that's what [tmux-resurrect](https://github.com/tmux-plugins/tmux-resurrect) does).\
 But what if you have multiple sessions that you use for multiple projects? What if you don't need all those sessions open at the same time? What if you don't *want* them open because your laptop is a decade old and you can't afford to start dozens of programs at once?\
 This plugin aims to solve that problem by only saving the session you are currently in as well as providing a fzf-based session switcher that allows you to not only switch between running sessions but also seamlessly restore a previously saved session and switch to it.\
 You can also archive sessions you'd like to keep but won't return to for a while. Archived sessions don't show up in the regular restore selection and can be unarchived whenever you're ready to open them again. If you won't need the session again, you can permanently delete it.
+
+## New in This Fork: Window-Level Operations
+
+This fork adds the ability to **move and load individual windows** between sessions:
+
+### Move Window (`prefix + C-w`)
+
+Move the current window to another session (running or saved):
+
+- Shows a picker with all running sessions and saved-but-inactive sessions
+- Saved sessions are marked with `[saved]`
+- If target is running: uses native `tmux move-window`
+- If target is saved/inactive: appends window to the session's save file and closes it
+
+**Use case:** Park a window in a "buffer" session for later without killing your work.
+
+### Load Window (`prefix + C-y`)
+
+Load a window from any saved session into the current session:
+
+- Pick a saved session file
+- Pick a window from that session
+- Window is created in the current session with all panes and layout restored
+- By default, the window is **removed** from the source file (move semantics)
+
+### Load Window Copy (`prefix + M-y` or configure)
+
+Same as Load Window, but keeps the window in the source file (copy semantics).
+
+### Quick Setup
+
+Add to your `.tmux.conf`:
+
+```bash
+# Use this fork instead of the original
+set -g @plugin 'SynapticSage/tmux-session-manager'
+
+# Optional: customize keybindings (these are the defaults)
+# set -g @session-manager-move-window-key 'C-w'
+# set -g @session-manager-load-window-key 'C-y'
+# set -g @session-manager-load-window-copy-key 'M-y'
+```
+
+Then reload tmux: `tmux source ~/.tmux.conf` and press `prefix + I` to install.
 
 Originally just a fork of `tmux-resurrect`, this plugin has since been rewritten from scratch (although the inspiration is still obvious and I might have borrowed from them in a few places) to be a more compact codebase that I can more easily maintain and extend if necessary.
 
@@ -70,6 +116,12 @@ You can customize the plugin by setting the following options in your `.tmux.con
 | `session-manager-unarchive-key-root`       | Any key binding       | Not set                         | Which key binding to set in root table for unarchiving and switching to a session. Using `prefix` is **not** necessary. |
 | `session-manager-delete-key`               | Any key binding       | Not set                         | Which key binding to set for deleting a saved session.                                                                  |
 | `session-manager-delete-key-root`          | Any key binding       | Not set                         | Which key binding to set in root table for deleting a saved session. Using `prefix` is **not** necessary.               |
+| `session-manager-move-window-key`          | Any key binding       | `C-w`                           | Which key binding to set for moving the current window to another session.                                              |
+| `session-manager-move-window-key-root`     | Any key binding       | Not set                         | Which key binding to set in root table for moving the current window. Using `prefix` is **not** necessary.              |
+| `session-manager-load-window-key`          | Any key binding       | `C-y`                           | Which key binding to set for loading a window from a saved session (move semantics).                                    |
+| `session-manager-load-window-key-root`     | Any key binding       | Not set                         | Which key binding to set in root table for loading a window. Using `prefix` is **not** necessary.                       |
+| `session-manager-load-window-copy-key`     | Any key binding       | Not set                         | Which key binding to set for loading a window with copy semantics (keeps in source).                                    |
+| `session-manager-load-window-copy-key-root`| Any key binding       | Not set                         | Which key binding to set in root table for loading a window with copy semantics. Using `prefix` is **not** necessary.   |
 | `session-manager-disable-nixos-nvim-check` | `on` or `off`         | `off`                           | When `on`, disable the check for Neovim on NixOS.                                                                       |
 | `session-manager-disable-fzf-warning`      | `on` or `off`         | `off`                           | When `on`, disable the check for fzf on startup.                                                                        |
 
