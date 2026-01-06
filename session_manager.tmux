@@ -89,3 +89,13 @@ bindings=$(get_tmux_option "@session-manager-load-window-copy-key-root" "")
 for key in $bindings; do
 	tmux bind-key -n "$key" run-shell "tmux display-popup -E '$(pwd)/load_window.sh --copy'"
 done
+
+# Pull Window (from any session - running or saved)
+bindings=$(get_tmux_option "@session-manager-pull-window-key" "C-p")
+for key in $bindings; do
+	tmux bind-key "$key" run-shell "tmux display-popup -E '$(pwd)/pull_window.sh'"
+done
+bindings=$(get_tmux_option "@session-manager-pull-window-key-root" "")
+for key in $bindings; do
+	tmux bind-key -n "$key" run-shell "tmux display-popup -E '$(pwd)/pull_window.sh'"
+done

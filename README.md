@@ -36,6 +36,17 @@ Load a window from any saved session into the current session:
 
 Same as Load Window, but keeps the window in the source file (copy semantics).
 
+### Pull Window (`prefix + C-p`)
+
+Pull a window from **any** session (running or saved) into the current session:
+
+- **Step 1**: Pick a source session (running sessions and saved sessions shown together)
+- **Step 2**: Pick a window from that session
+- Window is moved into current session and removed from source
+- Works seamlessly whether source is running or saved
+
+**Use case:** Unified interface to grab windows from anywhere - no need to remember if the source is running or saved.
+
 ### Quick Setup
 
 Add to your `.tmux.conf`:
@@ -48,7 +59,16 @@ set -g @plugin 'SynapticSage/tmux-session-manager'
 # set -g @session-manager-move-window-key 'C-w'
 # set -g @session-manager-load-window-key 'C-y'
 # set -g @session-manager-load-window-copy-key 'M-y'
+# set -g @session-manager-pull-window-key 'C-p'
 ```
+
+### Window Commands Summary
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `C-w` | Move | Push current window → another session |
+| `C-y` | Load | Pull window from saved sessions only |
+| `C-p` | Pull | Pull window from anywhere (running or saved) |
 
 Then reload tmux: `tmux source ~/.tmux.conf` and press `prefix + I` to install.
 
@@ -122,6 +142,8 @@ You can customize the plugin by setting the following options in your `.tmux.con
 | `session-manager-load-window-key-root`     | Any key binding       | Not set                         | Which key binding to set in root table for loading a window. Using `prefix` is **not** necessary.                       |
 | `session-manager-load-window-copy-key`     | Any key binding       | Not set                         | Which key binding to set for loading a window with copy semantics (keeps in source).                                    |
 | `session-manager-load-window-copy-key-root`| Any key binding       | Not set                         | Which key binding to set in root table for loading a window with copy semantics. Using `prefix` is **not** necessary.   |
+| `session-manager-pull-window-key`          | Any key binding       | `C-p`                           | Which key binding to set for pulling a window from any session (running or saved).                                      |
+| `session-manager-pull-window-key-root`     | Any key binding       | Not set                         | Which key binding to set in root table for pulling a window. Using `prefix` is **not** necessary.                       |
 | `session-manager-disable-nixos-nvim-check` | `on` or `off`         | `off`                           | When `on`, disable the check for Neovim on NixOS.                                                                       |
 | `session-manager-disable-fzf-warning`      | `on` or `off`         | `off`                           | When `on`, disable the check for fzf on startup.                                                                        |
 

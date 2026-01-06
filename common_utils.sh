@@ -120,6 +120,20 @@ get_windows_from_file() {
 	awk -F"$SEPARATOR" '$1=="window" {printf "%s: %s\n", $2, $3}' "$file"
 }
 
+# Get windows from a session (running or saved)
+# Usage: get_windows_from_session "session_name" "is_saved"
+# Returns: "index: name" format for each window
+get_windows_from_session() {
+	local session="$1"
+	local is_saved="$2"
+
+	if [[ "$is_saved" == "true" ]]; then
+		get_windows_from_file "$SAVE_DIR/${session}_last"
+	else
+		tmux list-windows -t "$session" -F "#{window_index}: #{window_name}"
+	fi
+}
+
 # Save current window to a session file
 # Usage: save_window_to_file "session_name"
 save_window_to_file() {
