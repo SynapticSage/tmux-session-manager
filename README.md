@@ -1,12 +1,45 @@
 # Tmux Session Manager (Extended)
 
-> Fork of [PhilVoel/tmux-session-manager](https://github.com/PhilVoel/tmux-session-manager) with **window-level operations**.
+> Fork of [PhilVoel/tmux-session-manager](https://github.com/PhilVoel/tmux-session-manager)
+> adding **window-level operations** and **session-lifecycle tools**
+> (browse / delete / rename with layout previews). Pairs naturally with
+> [Recon](https://github.com/anthropics/recon) for Claude Code workflows —
+> this plugin persists tmux state, Recon navigates live agents.
 
 We all love tmux. But whenever you close a session (for instance, by restarting your system), you lose all the windows, panes and programs you had open.\
 The easy solution: Just save the entire tmux environment and restore it (that's what [tmux-resurrect](https://github.com/tmux-plugins/tmux-resurrect) does).\
 But what if you have multiple sessions that you use for multiple projects? What if you don't need all those sessions open at the same time? What if you don't *want* them open because your laptop is a decade old and you can't afford to start dozens of programs at once?\
 This plugin aims to solve that problem by only saving the session you are currently in as well as providing a fzf-based session switcher that allows you to not only switch between running sessions but also seamlessly restore a previously saved session and switch to it.\
 You can also archive sessions you'd like to keep but won't return to for a while. Archived sessions don't show up in the regular restore selection and can be unarchived whenever you're ready to open them again. If you won't need the session again, you can permanently delete it.
+
+## New in This Fork: Session Lifecycle Tools
+
+Three read/mutate operations for managing saved sessions on disk,
+addressing the "I have a pile of saved sessions and don't remember what
+each one contains" problem. All three share a common layout preview:
+save timestamp, session cwd, per-window name and pane count, per-pane
+cwd — enough to recognize a session at a glance without restoring it.
+
+### View (`prefix + C-v`)
+
+Browse saved sessions with **live preview** as you move through the
+fzf list. Read-only — Esc or Enter just closes the popup. Use this to
+explore stale sessions before deciding between delete, rename, and
+restore.
+
+### Delete (`prefix + C-d`)
+
+Pick a session, see its layout preview, then see **every file** slated
+for unlink (active save plus all timestamped backups — often 20+ for
+long-lived sessions), then `y/N` to confirm. No accidents.
+
+### Rename (`prefix + C-n`)
+
+Pick a session, see its preview, enter a new name. Validates against
+collisions with existing saved files (refuses rather than overwrites),
+warns if the target name matches a currently-running tmux session
+(future `save` would merge into the renamed files), shows the full
+rename plan (`old_base → new_base` for every file), then `y/N`.
 
 ## New in This Fork: Window-Level Operations
 
@@ -55,22 +88,62 @@ Add to your `.tmux.conf`:
 # Use this fork instead of the original
 set -g @plugin 'SynapticSage/tmux-session-manager'
 
-# Optional: customize keybindings (these are the defaults)
-# set -g @session-manager-move-window-key 'C-w'
-# set -g @session-manager-load-window-key 'C-y'
-# set -g @session-manager-load-window-copy-key 'M-y'
-# set -g @session-manager-pull-window-key 'C-p'
+# Lifecycle tools — not bound by default, opt in as you like
+set -g @session-manager-view-key   'C-v'
+set -g @session-manager-delete-key 'C-d'
+set -g @session-manager-rename-key 'C-n'
+
+# Window-level operations — defaults shown
+# set -g @session-manager-move-window-key       'C-w'
+# set -g @session-manager-load-window-key       'C-y'
+# set -g @session-manager-load-window-copy-key  'M-y'
+# set -g @session-manager-pull-window-key       'C-p'
 ```
 
-### Window Commands Summary
+### Commands Summary
 
-| Key | Command | Description |
-|-----|---------|-------------|
-| `C-w` | Move | Push current window → another session |
-| `C-y` | Load | Pull window from saved sessions only |
-| `C-p` | Pull | Pull window from anywhere (running or saved) |
+| Key    | Command        | Description                                                    |
+|--------|----------------|----------------------------------------------------------------|
+| `C-s`  | Save           | Persist current session (windows, panes, layout) to disk       |
+| `C-r`  | Restore        | Switch to a running session or restore from disk               |
+| `C-v`  | View           | Browse saved sessions with live preview (read-only)            |
+| `C-d`  | Delete         | Preview a saved session, confirm, then unlink its files        |
+| `C-n`  | Rename         | Preview a saved session, validate new name, then rename files  |
+| `C-w`  | Move Window    | Push current window → another session (running or saved)       |
+| `C-y`  | Load Window    | Pull a window from a saved session into the current one        |
+| `C-p`  | Pull Window    | Pull a window from anywhere (running or saved)                 |
 
-Then reload tmux: `tmux source ~/.tmux.conf` and press `prefix + I` to install.
+Reload tmux: `tmux source ~/.tmux.conf` and press `prefix + I` to
+install.
+
+## Pairing with Recon for Claude Code Sessions
+
+[Recon](https://github.com/anthropics/recon) is a Rust TUI for managing
+live Claude Code agents running inside tmux. The two tools cover
+complementary axes:
+
+| Concern                                         | Tool         |
+|-------------------------------------------------|--------------|
+| Save / restore tmux state                       | This plugin  |
+| Delete / rename / browse saved sessions         | This plugin  |
+| Dashboard of currently-running Claude agents    | `recon` / `recon view` |
+| Jump to next agent waiting for input            | `recon next` |
+
+A typical Claude Code workflow leans on both:
+
+1. Spin up agents across multiple tmux windows as usual.
+2. Bind Recon's commands to keys you'll actually use —
+   `display-popup -E 'recon'` for the dashboard, `run-shell 'recon next'`
+   to jump between agents.
+3. When you want to step away, `prefix + C-s` saves the tmux layout;
+   Recon's own `park` / `unpark` subcommands handle agent-side state.
+4. Coming back later, `prefix + C-v` lets you browse saved tmux sessions
+   to pick the one matching the project you want to continue.
+
+Recon ships with its own CLI commands (`recon view`, `recon next`,
+`recon resume`, `recon park`, etc.). The authoring of tmux keybindings
+around those commands is user-scoped — build wrappers that match your
+own workflow rather than importing one-size-fits-all bindings.
 
 Originally just a fork of `tmux-resurrect`, this plugin has since been rewritten from scratch (although the inspiration is still obvious and I might have borrowed from them in a few places) to be a more compact codebase that I can more easily maintain and extend if necessary.
 
@@ -134,8 +207,12 @@ You can customize the plugin by setting the following options in your `.tmux.con
 | `session-manager-archive-key-root`         | Any key binding       | Not set                         | Which key binding to set in root table for archiving a session. Using `prefix` is **not** necessary.                    |
 | `session-manager-unarchive-key`            | Any key binding       | Not set                         | Which key binding to set for unarchiving and switching to a session.                                                    |
 | `session-manager-unarchive-key-root`       | Any key binding       | Not set                         | Which key binding to set in root table for unarchiving and switching to a session. Using `prefix` is **not** necessary. |
-| `session-manager-delete-key`               | Any key binding       | Not set                         | Which key binding to set for deleting a saved session.                                                                  |
+| `session-manager-delete-key`               | Any key binding       | Not set                         | Which key binding to set for deleting a saved session (preview + y/N confirmation).                                     |
 | `session-manager-delete-key-root`          | Any key binding       | Not set                         | Which key binding to set in root table for deleting a saved session. Using `prefix` is **not** necessary.               |
+| `session-manager-rename-key`               | Any key binding       | Not set                         | Which key binding to set for renaming a saved session (preview + validation + y/N confirmation).                        |
+| `session-manager-rename-key-root`          | Any key binding       | Not set                         | Which key binding to set in root table for renaming a saved session. Using `prefix` is **not** necessary.               |
+| `session-manager-view-key`                 | Any key binding       | Not set                         | Which key binding to set for browsing saved sessions with live layout preview (read-only).                              |
+| `session-manager-view-key-root`            | Any key binding       | Not set                         | Which key binding to set in root table for browsing saved sessions. Using `prefix` is **not** necessary.                |
 | `session-manager-move-window-key`          | Any key binding       | `C-w`                           | Which key binding to set for moving the current window to another session.                                              |
 | `session-manager-move-window-key-root`     | Any key binding       | Not set                         | Which key binding to set in root table for moving the current window. Using `prefix` is **not** necessary.              |
 | `session-manager-load-window-key`          | Any key binding       | `C-y`                           | Which key binding to set for loading a window from a saved session (move semantics).                                    |
