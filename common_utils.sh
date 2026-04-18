@@ -62,6 +62,47 @@ stop_spinner() {
 	tmux display-message "$1"
 }
 
+# Structured summary of a session's latest save: save time, session cwd,
+# and per-window name + pane count + per-pane cwd. Used by delete and
+# rename flows to let the user verify content before committing.
+# Usage: render_session_preview "/path/to/session_last"
+render_session_preview() {
+	local save_file=$1
+	if [[ ! -f "$save_file" ]]; then
+		printf '  (no _last save file found — session may be archive-only)\n'
+		return
+	fi
+	local mtime
+	mtime=$(date -r "$save_file" '+%Y-%m-%d %H:%M:%S')
+	awk -F'\t' -v home="$HOME" -v mtime="$mtime" '
+		BEGIN { wc = 0 }
+		NR == 2 && $1 !~ /^(window|pane|version)$/ && $0 ~ /^\// {
+			cwd = $0
+			sub(home, "~", cwd)
+			session_cwd = cwd
+		}
+		$1 == "window" { order[++wc] = $2; name[$2] = $3 }
+		$1 == "pane" {
+			widx = $5; path = $3
+			sub(home, "~", path)
+			if (length(path) > 68) path = "..." substr(path, length(path) - 65)
+			panes[widx] = (panes[widx] ? panes[widx] ORS : "") path
+			pcount[widx]++
+		}
+		END {
+			printf "  Last saved:  %s\n", mtime
+			if (session_cwd) printf "  Session cwd: %s\n", session_cwd
+			printf "  Windows:     %d total\n\n", wc
+			for (i = 1; i <= wc; i++) {
+				w = order[i]; s = pcount[w] == 1 ? "" : "s"
+				printf "    [%s] %-30s  (%d pane%s)\n", w, name[w], pcount[w], s
+				n = split(panes[w], arr, ORS)
+				for (j = 1; j <= n; j++) printf "          %s\n", arr[j]
+			}
+		}
+	' "$save_file"
+}
+
 # Open selection for list of sessions
 # Usage: select_session "$(get_sessions)"
 select_session() {

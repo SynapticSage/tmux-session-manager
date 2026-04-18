@@ -60,6 +60,26 @@ for key in $bindings; do
 	tmux bind-key -n "$key" run-shell "tmux display-popup -E '$(pwd)/delete_session.sh'"
 done
 
+# View (read-only browse with live preview)
+bindings=$(get_tmux_option "@session-manager-view-key" "")
+for key in $bindings; do
+	tmux bind-key "$key" run-shell "tmux display-popup -E '$(pwd)/view_session.sh'"
+done
+bindings=$(get_tmux_option "@session-manager-view-key-root" "")
+for key in $bindings; do
+	tmux bind-key -n "$key" run-shell "tmux display-popup -E '$(pwd)/view_session.sh'"
+done
+
+# Rename
+bindings=$(get_tmux_option "@session-manager-rename-key" "")
+for key in $bindings; do
+	tmux bind-key "$key" run-shell "tmux display-popup -E '$(pwd)/rename_session.sh'"
+done
+bindings=$(get_tmux_option "@session-manager-rename-key-root" "")
+for key in $bindings; do
+	tmux bind-key -n "$key" run-shell "tmux display-popup -E '$(pwd)/rename_session.sh'"
+done
+
 # Move Window (to running or saved session)
 bindings=$(get_tmux_option "@session-manager-move-window-key" "C-w")
 for key in $bindings; do
