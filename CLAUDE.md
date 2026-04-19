@@ -80,6 +80,7 @@ window_badge_providers/
     10-claude-hooks.sh                 reads TMUX_BADGE_PANE_*_STATE env vars
     20-recon.sh                        `recon json` with pane_target→pane_id
     30-tmux-ignore.sh                  @recon-ignore option inheritance
+    40-codex.sh                        OpenAI Codex sessions (polled, no hooks)
 ```
 
 Cache: `/tmp/tmux-window-badge-$(id -u).cache`.
@@ -149,9 +150,18 @@ Two complementary signals today:
    Fails silently if hooks didn't run (externally-killed Claude,
    session pre-dating the hook registration).
 
-2. **`20-recon.sh` (polled, authoritative).** Calls `recon json`,
-   translates `pane_target` → `pane_id`. Catches everything hooks
-   miss. Cost: ~50ms for ~20 sessions.
+2. **`20-recon.sh` (polled, authoritative for Claude).** Calls
+   `recon json`, translates `pane_target` → `pane_id`. Catches
+   everything the Claude hooks miss. Cost: ~50ms for ~20 sessions.
+
+3. **`40-codex.sh` (polled, best-effort for Codex).** Codex has no
+   hook system and isn't observed by `recon`. This provider does
+   one `ps -ax` pass to find TTYs running `codex`, maps them to
+   pane_ids, and infers state by sampling `tmux capture-pane`. The
+   pattern set is deliberately narrow (braille-spinner glyphs only)
+   to avoid false `working` on panes that merely contain the word
+   "thinking" in text. Default when codex is present but no pattern
+   matches: `idle`.
 
 The cache TTL (default 5s) controls how often `recon json` gets
 called. The reconciliation is implicit in the merge step: any pane
@@ -235,6 +245,29 @@ one window is rendering (which is always true when tmux is active).
   additive text in `window-status-format`; the plugin's
   `window-status-style` coloring still applies for the focused-pane
   state. Two signals, two channels.
+
+### Future: `@window-badge-split-by-agent` mode
+
+Today all providers emit states into a single shared vocabulary, so a
+pane running Claude-working and another running Codex-working both
+count into the same `⚙2`. Users who run heterogeneous agent fleets
+have asked (2026-04-19) for an opt-in split mode that prefixes each
+state count with an agent glyph — e.g. `C⚙1 🧠⚙1` instead of `⚙2` —
+to distinguish sources visually.
+
+Implementation sketch when this lands:
+- Extend the provider TSV contract to a 4th optional column: `agent`
+  (values: `claude`, `codex`, or a short user-defined tag). Existing
+  3-column providers default their agent from the filename prefix
+  (`10-claude-hooks.sh` → `claude`, `40-codex.sh` → `codex`).
+- Add `@window-badge-split-by-agent` (default `off`). When `on`, the
+  hot path groups counts by (state, agent) and emits one styled run
+  per combination.
+- Symbols remain state-level; agent is a prefix glyph read from
+  `@window-badge-agent-glyph-<agent>`.
+
+Not implemented. Captured here so future maintainers don't invent a
+different 4th column for the same purpose.
 
 ### Adding a new provider
 
