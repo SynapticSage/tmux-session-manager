@@ -1,9 +1,9 @@
-# tmux-curate
+# tmux-attic
 
 > Curate your tmux sessions — save, browse, preview, rename, delete, and
 > move windows between sessions with layout previews at every destructive
 > step. Pairs with [Recon](https://github.com/anthropics/recon) for
-> navigating live Claude Code agents: `tmux-curate` persists state on
+> navigating live Claude Code agents: `tmux-attic` persists state on
 > disk, Recon navigates processes in running panes.
 
 Saving and restoring tmux sessions is a solved problem
@@ -15,7 +15,7 @@ live work you haven't thought about in weeks. The only way to remember
 what's in them is to restore each one — which kills your current state
 or spawns new sessions you didn't want.
 
-`tmux-curate` treats saved sessions as first-class objects you can
+`tmux-attic` treats saved sessions as first-class objects you can
 inspect in place. Every save carries its windows, panes, working
 directories, and running commands. A shared preview renderer shows the
 session's shape — window names, pane counts, per-pane cwds, save
@@ -99,7 +99,7 @@ Pull a window from **any** session (running or saved) into the current session:
 
 When you're running many Claude Code sessions across tmux windows, it's
 easy to lose track of which ones are waiting on you, which are grinding
-away, and which are idle. `tmux-curate` ships an opt-in system that
+away, and which are idle. `tmux-attic` ships an opt-in system that
 appends per-window badges to `window-status-format`, so the tmux status
 bar shows at a glance what's happening across every window.
 
@@ -157,7 +157,7 @@ Runs the installer interactively. It:
 
 Before modifying either file, it writes a timestamped `.bak.<stamp>`
 next to the original. The block is bounded by sentinel comments
-(`# >>> tmux-curate badges >>>` / `# <<< tmux-curate badges <<<`) so
+(`# >>> tmux-attic badges >>>` / `# <<< tmux-attic badges <<<`) so
 reruns are idempotent.
 
 Flags:
@@ -193,7 +193,7 @@ Full contract in [`CLAUDE.md`](CLAUDE.md).
 Add to your `.tmux.conf`:
 
 ```bash
-set -g @plugin 'SynapticSage/tmux-curate'
+set -g @plugin 'SynapticSage/tmux-attic'
 
 # Lifecycle tools — not bound by default, opt in as you like
 set -g @session-manager-view-key   'C-v'
@@ -279,7 +279,7 @@ The save format is inherited from
 
 Add plugin to the list of TPM plugins in `.tmux.conf`:
 
-    set -g @plugin 'SynapticSage/tmux-curate'
+    set -g @plugin 'SynapticSage/tmux-attic'
 
 Hit `prefix + I` to install the plugin.
 
@@ -287,7 +287,7 @@ Hit `prefix + I` to install the plugin.
 
 Clone the repo:
 
-    $ git clone https://github.com/SynapticSage/tmux-curate ~/clone/path
+    $ git clone https://github.com/SynapticSage/tmux-attic ~/clone/path
 
 Add this line to your `.tmux.conf`:
 
@@ -301,7 +301,7 @@ The upstream
 [PhilVoel/tmux-session-manager](https://github.com/PhilVoel/tmux-session-manager)
 is packaged in nixpkgs (release `25.11`+) as
 `tmuxPlugins.tmux-session-manager`. That package ships the upstream
-feature set only — it does not include tmux-curate's lifecycle tools.
+feature set only — it does not include tmux-attic's lifecycle tools.
 Use the manual-installation path above if you want the curate features
 on NixOS.
 
@@ -343,7 +343,7 @@ I'm always thankful for bug reports and new ideas. For details, check the [guide
 
 ## Credits
 
-`tmux-curate` builds on
+`tmux-attic` builds on
 [PhilVoel/tmux-session-manager](https://github.com/PhilVoel/tmux-session-manager),
 which rewrote [tmux-resurrect](https://github.com/tmux-plugins/tmux-resurrect)
 into a more compact per-session-file codebase. The save-file format and

@@ -26,8 +26,8 @@ BADGE_SCRIPT="$REPO_DIR/window_badge.sh"
 # Sentinel markers — used by both install and uninstall to identify
 # lines this script owns. Do not change these after shipping; existing
 # installs depend on them matching.
-BEGIN_MARKER='# >>> tmux-curate badges >>>'
-END_MARKER='# <<< tmux-curate badges <<<'
+BEGIN_MARKER='# >>> tmux-attic badges >>>'
+END_MARKER='# <<< tmux-attic badges <<<'
 
 # ---------------------------------------------------------------------
 # CLI
@@ -314,7 +314,7 @@ echo ""
 
 case "$action" in
   install)
-    echo "Install tmux-curate badges (source: $REPO_DIR)"
+    echo "Install tmux-attic badges (source: $REPO_DIR)"
     echo "  will modify: $TMUX_CONF"
     echo "  will modify: $CLAUDE_SETTINGS"
     echo "  dry-run: $([[ $dry_run -eq 1 ]] && echo yes || echo no)"
@@ -329,7 +329,7 @@ case "$action" in
     echo "Done. Try: attach to tmux, watch the status bar for per-window badges."
     ;;
   uninstall)
-    echo "Uninstall tmux-curate badges"
+    echo "Uninstall tmux-attic badges"
     echo "  will modify: $TMUX_CONF"
     echo "  will modify: $CLAUDE_SETTINGS"
     echo "  dry-run: $([[ $dry_run -eq 1 ]] && echo yes || echo no)"
