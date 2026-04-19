@@ -56,9 +56,14 @@ by project. The cycle scripts live in `/Users/ryoung/Code/repos/tmux-manage/`.
 - **`Prefix + i`** — Toggle `@recon-ignore` on the **current pane**
   (overrides tmux default `display-message`, which duplicated status-bar
   info anyway).
+- **`Prefix + e`** — Toggle `@recon-ignore` on the **current window**.
+  Silences every pane in the window at once — all agents inside it
+  stop contributing to status-bar badge counts, and the recon cycle
+  skips them. Flip again to restore. Mnemonic: *e* = exclude.
 - **`Prefix + I`** — Open fzf popup to toggle `@recon-ignore` at
   **session** or **window** scope. Overrides TPM's plugin-install
-  hotkey; see *Manual TPM Invocation* below for replacements.
+  hotkey; see *Manual TPM Invocation* below for replacements. Useful
+  when the window you want to toggle isn't the one you're focused on.
 
 ### How `@recon-ignore` inheritance works
 
