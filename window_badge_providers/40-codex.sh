@@ -35,12 +35,32 @@ set -euo pipefail
 
 command -v tmux >/dev/null 2>&1 || exit 0
 
-# One-shot collection of TTYs running codex. `-o tty= -o comm=`
-# suppresses the column headers, yielding lines like "ttys004 codex".
-# macOS BSD ps; output format is stable enough across versions to
-# rely on awk field positions.
-codex_ttys=$(ps -ax -o tty= -o comm= 2>/dev/null \
-  | awk '$2=="codex" {print "/dev/"$1}' \
+# One-shot collection of TTYs running codex.
+#
+# NB: macOS BSD `ps -o comm=` reports the first 16 chars of the
+# program PATH, not its basename — so a codex binary invoked as
+# /opt/homebrew/Cellar/.../codex/codex shows up truncated to something
+# like "/opt/homebrew/Ce". That makes `$2=="codex"` useless here.
+# We use `-o command=` (full invocation line) and look for any
+# space-separated field whose tail is "/codex" or the bare string
+# "codex". Covers all four observed launch patterns:
+#   codex -m ...              (on PATH)
+#   /abs/path/to/codex -m ... (direct binary)
+#   node /path/to/.bin/codex  (npm/npx wrapper)
+#   /Cellar/.../codex/codex   (homebrew-vendored node module)
+# and rejects arg-like fields such as "codex.txt", "@openai/codex@latest",
+# or "codex-foo" that would otherwise trip a naïve substring grep.
+codex_ttys=$(ps -ax -o tty= -o command= 2>/dev/null \
+  | awk '
+      {
+        for (i = 2; i <= NF; i++) {
+          if ($i ~ /(^|\/)codex$/) {
+            print "/dev/"$1
+            next
+          }
+        }
+      }
+    ' \
   | sort -u)
 
 # No codex running anywhere — provider exits with no output, merger
