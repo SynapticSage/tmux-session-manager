@@ -53,17 +53,23 @@ by project. The cycle scripts live in `/Users/ryoung/Code/repos/tmux-manage/`.
   status bar when nothing is waiting. Skips ignored panes.
 - **`Prefix + G`** — Open the full Recon dashboard (table view) in a 90%
   popup.
-- **`Prefix + i`** — Toggle `@recon-ignore` on the **current window**.
-  Silences every pane in the window at once — all agents inside it
-  stop contributing to status-bar badge counts, and the recon cycle
-  skips them. Flip again to restore. Window is the natural unit: if
-  you want per-pane granularity, extend the picker (`Prefix + I`)
-  with a pane scope. Overrides tmux default `display-message`, which
-  duplicated status-bar info anyway.
+- **`Prefix + i`** — Toggle `@recon-ignore` on the **current pane**.
+  Silences just that one pane — other agents in the same window keep
+  contributing to badge counts and the recon cycle. Overrides tmux
+  default `display-message`, which duplicated status-bar info anyway.
+- **`Prefix + e`** — Toggle `@recon-ignore` on the **current window**.
+  Silences every pane in the window at once via tmux's pane → window
+  → session inheritance — all agents inside the window stop
+  contributing to badges, and the recon cycle skips them. Overrides
+  tmux-text-macros' `split-window` binding; launch text macros via
+  their script directly if you use them.
 - **`Prefix + I`** — Open fzf popup to toggle `@recon-ignore` at
   **session** or **window** scope for a non-focused target. Overrides
   TPM's plugin-install hotkey; see *Manual TPM Invocation* below for
   replacements.
+
+Both `i` and `e` call `recon_ignore_toggle.sh` under different
+`--pane` / `--window` flags, so the scope logic lives in one place.
 
 ### How `@recon-ignore` inheritance works
 
