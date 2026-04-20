@@ -26,6 +26,118 @@ get_tmux_option() {
 	fi
 }
 
+# Rewrite a captured pane command so restore resumes the running
+# Claude/Codex session rather than spawning a fresh one.
+#
+# Called by save_session.sh right before the command is written to
+# the save file. Unmatched commands pass through unchanged.
+#
+# Claude: injects `--continue` (reuses the most recent session for
+#   the pane's cwd, which the restore path re-enters via
+#   pane_current_path). Simple and works for the common case of one
+#   Claude per directory. For multi-Claude-per-cwd precision we'd
+#   need to stash pane → session_id mappings at save time — not yet
+#   implemented; see README.
+# Codex: rewrites to `codex resume --last`. Codex has no hook API so
+#   we can't correlate to a specific session by pane; --last is the
+#   best available signal and matches "continue what you were doing".
+#
+# Handles the three invocation shapes codex takes:
+#   codex [args]                          -> codex resume --last [args]
+#   node /path/to/codex [args]            -> codex resume --last [args]
+#   /abs/path/.../codex/codex [args]      -> codex resume --last [args]
+# and claude as either `claude [args]` or `/abs/path/claude [args]`.
+#
+# Usage: rewrite_agent_command "<captured command>"
+rewrite_agent_command() {
+	local cmd="$1"
+	[[ -z "$cmd" ]] && return
+	local -a tokens
+	read -r -a tokens <<< "$cmd"
+	[[ ${#tokens[@]} -eq 0 ]] && { printf '%s' "$cmd"; return; }
+
+	local first="${tokens[0]}"
+	local second="${tokens[1]:-}"
+	local third="${tokens[2]:-}"
+	local first_base; first_base=$(basename "$first" 2>/dev/null)
+	local agent=""
+	local -a rest_tokens=()
+
+	# Detect agent + work out where the user-supplied args begin.
+	# The five shapes we recognise:
+	#   claude [args]                         -- direct
+	#   /abs/path/claude [args]               -- direct with path
+	#   codex [args]                          -- direct
+	#   /abs/path/.../codex [args]            -- direct with path
+	#   node /path/to/codex [args]            -- node wrapper
+	#   npm exec <spec-containing-codex> [args] -- npm wrapper
+	#   npx <spec-containing-codex> [args]    -- npx wrapper
+	if [[ "$first_base" == "claude" ]]; then
+		agent=claude
+		rest_tokens=("${tokens[@]:1}")
+	elif [[ "$first_base" == "codex" ]] || [[ "$first" == */codex ]]; then
+		agent=codex
+		rest_tokens=("${tokens[@]:1}")
+	elif [[ "$first_base" == "node" && "$second" == */codex ]]; then
+		agent=codex
+		rest_tokens=("${tokens[@]:2}")
+	elif [[ "$first_base" == "npm" && "$second" == "exec" && "$third" == *codex* ]]; then
+		agent=codex
+		rest_tokens=("${tokens[@]:3}")
+	elif [[ "$first_base" == "npx" && "$second" == *codex* ]]; then
+		agent=codex
+		rest_tokens=("${tokens[@]:2}")
+	fi
+
+	case "$agent" in
+		claude)
+			# Strip any existing session-control flags so our injected
+			# --continue doesn't clash with them (claude rejects a
+			# --continue + --resume pair).
+			local -a filtered=()
+			local skip_next=0 tok
+			for tok in "${rest_tokens[@]}"; do
+				if (( skip_next )); then skip_next=0; continue; fi
+				case "$tok" in
+					--continue|-c|--fork-session) continue ;;
+					--resume|--from-pr)           skip_next=1; continue ;;
+					--resume=*|--from-pr=*)       continue ;;
+					*) filtered+=("$tok") ;;
+				esac
+			done
+			printf '%s' "claude --continue"
+			for tok in "${filtered[@]}"; do printf ' %s' "$tok"; done
+			;;
+		codex)
+			# If the captured args already lead with `resume [<id>]`,
+			# drop that subcommand + its positional ID so our `resume
+			# --last` injection is the canonical session-control. Then
+			# drop any stray --last.
+			local -a filtered=()
+			local past_resume=0 i tok
+			for (( i=0; i<${#rest_tokens[@]}; i++ )); do
+				tok="${rest_tokens[i]}"
+				if (( i == 0 )) && [[ "$tok" == "resume" ]]; then
+					past_resume=1; continue
+				fi
+				if (( past_resume == 1 )); then
+					past_resume=2
+					# Non-flag token right after `resume` is its
+					# session-id positional — swallow it too.
+					[[ "$tok" != -* ]] && continue
+				fi
+				[[ "$tok" == "--last" ]] && continue
+				filtered+=("$tok")
+			done
+			printf '%s' "codex resume --last"
+			for tok in "${filtered[@]}"; do printf ' %s' "$tok"; done
+			;;
+		*)
+			printf '%s' "$cmd"
+			;;
+	esac
+}
+
 # Get the save directory from the tmux options and expand $HOME.
 SAVE_DIR=$(get_tmux_option "@session-manager-save-dir" "${HOME}/.local/share/tmux/sessions" | sed "s,\$HOME,$HOME,g; s,\~,$HOME,g")
 mkdir -p "$SAVE_DIR"

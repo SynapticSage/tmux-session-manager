@@ -293,6 +293,77 @@ The save format is inherited from
 - programs running within a pane
   - taking care of NixOS' Neovim wrapper. As NixOS wraps some programs and starts them with additional arguments, the plugin removes those arguments when it detects Neovim running on NixOS. If you're using the unwrapped version of Neovim, you can disable this check in the [Configuration](#Configuration).
 
+### Command capture: portability fix
+
+The upstream implementation read program command lines from
+`/proc/<pid>/cmdline`, which is Linux-only — on macOS and BSD the
+`/proc` filesystem does not exist, so every pane's captured command
+came out empty and restore re-entered only the directory.
+
+This fork uses `ps -p <pid> -o args=` on non-Linux platforms, falling
+back to `/proc` reads only for the NixOS Neovim-wrapper special case
+(which genuinely needs argv separation that `ps` flattens). Arg
+boundaries are lossy for args with embedded spaces — a known
+limitation worth flagging, but rare in typical agent invocations.
+
+### Agent-aware session restoration
+
+Naïvely re-running the captured command for a Claude or Codex pane
+spawns a **new** conversation rather than continuing the one that was
+live at save time. When saving, this fork rewrites claude and codex
+invocations so the restored pane resumes the running session:
+
+| Captured command                                         | Saved (rewritten) form                |
+|----------------------------------------------------------|---------------------------------------|
+| `claude`                                                 | `claude --continue`                   |
+| `claude --dangerously-skip-permissions`                  | `claude --continue --dangerously-skip-permissions` |
+| `claude --resume <id>` (conflicting flag stripped)       | `claude --continue`                   |
+| `codex -m gpt-5.4`                                       | `codex resume --last -m gpt-5.4`      |
+| `npm exec @openai/codex@latest -m gpt-5.4`               | `codex resume --last -m gpt-5.4`      |
+| `node /path/to/codex -m gpt-5.4`                         | `codex resume --last -m gpt-5.4`      |
+| `/abs/path/.../codex/codex -m gpt-5.4`                   | `codex resume --last -m gpt-5.4`      |
+
+`--continue` asks claude to resume the most recent session in the
+pane's `cwd`, which the restore path re-enters via the captured
+`pane_current_path`. For the common case of one agent per directory
+per project, this produces the intended restore. If you run multiple
+claude sessions in the same directory, restore currently picks
+whichever is most-recent per claude's own bookkeeping — a precision
+story for a future enhancement (would require storing per-pane
+session IDs in the save file).
+
+Codex's `resume --last` is similarly cwd-sensitive. Codex has no hook
+API so we can't correlate pane → session ID directly the way we could
+for claude via `recon json`; `--last` is the best available signal and
+matches the spirit of "continue what was running".
+
+The rewriter lives in `rewrite_agent_command` (see
+`common_utils.sh`) — unit tests worth 16 input patterns live inline
+in that file's header comment. Non-agent commands pass through
+unchanged.
+
+### Caveat: tmux-continuum / tmux-resurrect auto-save
+
+This fork's augmented save runs only when the user triggers it
+(`prefix + C-s` by default). If you also use
+[`tmux-continuum`](https://github.com/tmux-plugins/tmux-continuum)
+for its 15-minute auto-save loop, those saves are made by
+`tmux-resurrect` into a separate directory
+(`~/.local/share/tmux/resurrect/`) and do **not** go through this
+agent-aware logic — a resurrect-driven restore will re-launch
+`claude` / `codex` as fresh sessions.
+
+Options:
+
+- Save manually (`prefix + C-s`) before any detach you care about —
+  the augmented save file wins on restore since it lives under
+  `~/.local/share/tmux/sessions/` and this repo's bindings override
+  resurrect's.
+- If you want continuum's cadence with agent-aware capture, Path B
+  in the roadmap (drop-in `@resurrect-strategy-claude` and
+  `@resurrect-strategy-codex` scripts that integrate with resurrect's
+  hook system) would give you both.
+
 ## Dependencies
 
 - [`tmux`](https://github.com/tmux/tmux) (3.2 or higher)
