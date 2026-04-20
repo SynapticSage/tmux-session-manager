@@ -323,19 +323,25 @@ invocations so the restored pane resumes the running session:
 | `node /path/to/codex -m gpt-5.4`                         | `codex resume --last -m gpt-5.4`      |
 | `/abs/path/.../codex/codex -m gpt-5.4`                   | `codex resume --last -m gpt-5.4`      |
 
-`--continue` asks claude to resume the most recent session in the
-pane's `cwd`, which the restore path re-enters via the captured
-`pane_current_path`. For the common case of one agent per directory
-per project, this produces the intended restore. If you run multiple
-claude sessions in the same directory, restore currently picks
-whichever is most-recent per claude's own bookkeeping — a precision
-story for a future enhancement (would require storing per-pane
-session IDs in the save file).
+For Claude, the rewriter also looks up the specific `session_id` per
+pane via a one-shot `recon json` call at save time. When recon knows
+the pane's session, the saved command becomes
+`claude --resume <uuid> [preserved flags]` instead of
+`claude --continue`. This matters when you run multiple Claude
+sessions in the same directory: `--continue` picks whichever is
+most-recent and collapses all restored panes onto one conversation;
+`--resume <uuid>` restores each pane to its own session.
 
-Codex's `resume --last` is similarly cwd-sensitive. Codex has no hook
-API so we can't correlate pane → session ID directly the way we could
-for claude via `recon json`; `--last` is the best available signal and
-matches the spirit of "continue what was running".
+If recon isn't installed or hasn't observed the pane yet, the
+rewriter falls back to `--continue`. Either way, `pane_current_path`
+is still captured so cwd-based resolution works as a safety net.
+
+Codex's `resume --last` is still cwd-based because Codex has no hook
+API and no per-pane session observer equivalent to recon — we can't
+correlate pane → session ID without writing a dedicated observer
+(parse `~/.codex/history.jsonl` plus process-tree + start-time
+heuristics). For single-codex-per-cwd workflows `--last` is fine;
+multi-codex precision is a future enhancement.
 
 The rewriter lives in `rewrite_agent_command` (see
 `common_utils.sh`) — unit tests worth 16 input patterns live inline

@@ -12,6 +12,28 @@ WINDOW_FORMAT="window$S#{window_index}$S#{window_name}$S#{window_layout}$S#{wind
 # Tmux format string for panes
 PANE_FORMAT="pane$S#{pane_index}$S#{pane_current_path}$S#{pane_active}$S#{window_index}$S#{pane_pid}"
 
+# Path B: per-pane Claude session_id capture for precise restoration.
+# One `recon json` call up front yields a pane_target -> session_id
+# map that the pane loop below looks up via awk. If recon isn't
+# installed or fails, the map is empty and the rewriter falls back
+# to `--continue` (Path A's cwd-scoped resume).
+RECON_MAP=$(mktemp "${TMPDIR:-/tmp}/recon_map.XXXXXX")
+trap 'rm -f "$RECON_MAP"' EXIT
+if command -v recon >/dev/null 2>&1; then
+	recon json 2>/dev/null | python3 -c '
+import sys, json
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    raise SystemExit(0)
+for s in d.get("sessions", []):
+    t = s.get("pane_target", "")
+    sid = s.get("session_id", "")
+    if t and sid:
+        print(f"{t}\t{sid}")
+' > "$RECON_MAP" 2>/dev/null || true
+fi
+
 start_spinner "Saving current session"
 if [[ -e "${NEW_SAVE_FILE}_archived" ]]; then
 	mv "${NEW_SAVE_FILE}_archived" "$NEW_SAVE_FILE"
@@ -59,7 +81,15 @@ tmux list-panes -s -F "$PANE_FORMAT" | while IFS="$SEPARATOR" read -r line; do
 	# Agent-aware restoration: rewrite claude / codex invocations so
 	# the restored pane resumes the prior session instead of spawning
 	# a new one. See rewrite_agent_command in common_utils.sh.
-	command=$(rewrite_agent_command "$command")
+	#
+	# For claude panes, look up the specific session_id via the recon
+	# map built at script start. Empty lookup → rewriter falls back
+	# to --continue (works when there's only one claude per cwd).
+	pane_idx=$(cut -f2 <<< "$line")
+	window_idx=$(cut -f5 <<< "$line")
+	pane_target="${CURRENT_SESSION}:${window_idx}.${pane_idx}"
+	session_id=$(awk -F'\t' -v t="$pane_target" '$1==t {print $2; exit}' "$RECON_MAP")
+	command=$(rewrite_agent_command "$command" "$session_id")
 
 	awk -v command="$command" \
 		'BEGIN {FS=OFS="\t"} {$6=command; print}'\

@@ -51,6 +51,15 @@ get_tmux_option() {
 # Usage: rewrite_agent_command "<captured command>"
 rewrite_agent_command() {
 	local cmd="$1"
+	# Optional: a specific Claude session_id to resume. When provided
+	# and the captured command is a claude invocation, we emit
+	# `claude --resume <id>` instead of `--continue`. This is the
+	# precision path for users who run multiple Claude sessions in
+	# the same cwd (where --continue's "most recent in cwd" heuristic
+	# would collapse all panes onto one conversation). When absent
+	# (recon not installed, or pane not tracked yet), we fall back
+	# to --continue — cheaper but lossy in the multi-session case.
+	local session_id="${2:-}"
 	[[ -z "$cmd" ]] && return
 	local -a tokens
 	read -r -a tokens <<< "$cmd"
@@ -105,7 +114,11 @@ rewrite_agent_command() {
 					*) filtered+=("$tok") ;;
 				esac
 			done
-			printf '%s' "claude --continue"
+			if [[ -n "$session_id" ]]; then
+				printf '%s' "claude --resume $session_id"
+			else
+				printf '%s' "claude --continue"
+			fi
 			for tok in "${filtered[@]}"; do printf ' %s' "$tok"; done
 			;;
 		codex)
