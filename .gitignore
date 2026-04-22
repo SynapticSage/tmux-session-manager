@@ -1,2 +1,17 @@
 # Local-only architectural notes, not for public README consumption
 CLAUDE.md
+
+# Claude Code agent metadata; not part of this repo's product
+.claude/
+
+# Sibling clones of unrelated projects — a parent-directory naming
+# accident (this dir is called tmux-manage on disk), not tmux-attic
+# content. Keep them local; don't publish.
+repos/
+
+# Unrelated personal research notes that happen to live in this cwd
+cc-codex-interop.md
+move_memini_to_vocal_diary.sh
+tmux-claude-tools.md
+tmux-claude-tools.pdf
+tmux-pane-addressing.md
