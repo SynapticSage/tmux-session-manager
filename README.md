@@ -105,6 +105,15 @@ extracted into its own TPM plugin:
 set -g @plugin 'SynapticSage/tmux-agent-tracker'
 ```
 
+That plugin covers:
+
+- **Per-window state badges** — `⌨ ⚙ ✳ ✓ 💤 ∅` symbols + counts,
+  event-driven via Claude Code hooks and polled via `recon` / `codex`.
+- **Per-pane marks** — tag individual Claude/Codex panes with a short
+  label (1-6 chars) or an emoji. `prefix + m` opens a popup; Ctrl-E
+  switches to an fzf-based emoji picker. Marked panes render
+  individually alongside the aggregated counts for unmarked panes.
+
 Muting windows via `@recon-ignore` is still driven from this repo —
 the badge plugin's `30-tmux-ignore.sh` provider reads the
 `@recon-ignore` option that the toggles below flip. The two
