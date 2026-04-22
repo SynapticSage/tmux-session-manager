@@ -19,6 +19,11 @@
 #
 # tmux options read (all optional):
 #   @window-badge-mode           "counts" (default) | "worst" | "off"
+#   @window-badge-palette        "" (default — terminal named colors) |
+#                                "fallback" (bg+fg color chips, theme-agnostic) |
+#                                "onedark" / "catppuccin" (hint, currently
+#                                identical to default — reserved for future
+#                                per-theme tuning)
 
 set -euo pipefail
 
@@ -36,6 +41,8 @@ mode=$(tmux show-option -gqv "@window-badge-mode" 2>/dev/null || true)
 
 ttl=$(tmux show-option -gqv "@window-badge-poll-interval" 2>/dev/null || true)
 [[ -z "$ttl" ]] && ttl="${WINDOW_BADGE_TTL:-5}"
+
+palette=$(tmux show-option -gqv "@window-badge-palette" 2>/dev/null || true)
 
 # --- Cache maintenance -------------------------------------------------
 # First-ever render: must synchronously populate the cache so the badge
@@ -61,11 +68,12 @@ fi
 # --- Render ------------------------------------------------------------
 panes=$(tmux list-panes -t "$window_id" -F '#{pane_id}' 2>/dev/null) || { echo ""; exit 0; }
 
-PANES="$panes" BADGE_MODE="$mode" CACHE_FILE="$cache_file" python3 <<'PY'
+PANES="$panes" BADGE_MODE="$mode" BADGE_PALETTE="${palette:-}" CACHE_FILE="$cache_file" python3 <<'PY'
 import os
 
 panes = set(os.environ.get("PANES", "").split())
 mode = os.environ.get("BADGE_MODE", "counts")
+palette = os.environ.get("BADGE_PALETTE", "")
 cache_file = os.environ["CACHE_FILE"]
 
 counts = {"needs-input": 0, "working": 0, "new": 0, "done": 0, "idle": 0}
@@ -100,7 +108,12 @@ symbols = {
 # like 💤. Forcing fg here restores legibility and adds semantic
 # color (yellow=attention, green=done, etc.). Named colors so it
 # adapts to the user's terminal palette.
-styles = {
+# Two palettes. The default (fg-only) inherits the status-bar background
+# from whatever theme is active — fine on onedark/catppuccin/dracula,
+# can wash out on default tmux green or light themes. The 'fallback'
+# palette uses bg+fg chips so each badge is its own legible island
+# regardless of background; opt-in via @window-badge-palette = fallback.
+default_styles = {
     "needs-input": "fg=yellow,bold",
     "working":     "fg=cyan,bold",
     "new":         "fg=magenta,bold",
@@ -108,7 +121,15 @@ styles = {
     "idle":        "fg=brightwhite",     # 💤 is already colored; this
                                          # only reaches the digit next to it
 }
-ignored_style = "fg=colour244"           # visible mid-gray, not dim
+fallback_styles = {
+    "needs-input": "bg=yellow,fg=black,bold",
+    "working":     "bg=cyan,fg=black,bold",
+    "new":         "bg=magenta,fg=white,bold",
+    "done":        "bg=green,fg=black,bold",
+    "idle":        "bg=colour237,fg=brightwhite",
+}
+styles = fallback_styles if palette == "fallback" else default_styles
+ignored_style = "fg=colour244" if palette != "fallback" else "bg=colour237,fg=colour244"
 
 order = ["needs-input", "working", "new", "done", "idle"]
 
