@@ -93,6 +93,27 @@ Pull a window from **any** session (running or saved) into the current session:
 
 **Use case:** Unified interface to grab windows from anywhere - no need to remember if the source is running or saved.
 
+### Scratchpad Notes (`prefix + a` / `prefix + A`)
+
+Open a persistent note tied to the current window (`a`) or pane (`A`) in
+`$EDITOR`, inside a popup:
+
+- **`C-q`** detaches the popup — the editor keeps running in a background
+  tmux session, so reopening restores it instantly, cursor and all
+- Quitting the editor closes the note fully
+- Notes are markdown files under `<save-dir>/notes/<session>/`, keyed by
+  window index — the same identifier save/restore preserves, so notes
+  survive tmux restarts and re-attach to their windows after a restore
+- Session previews (view/delete/rename) list each note's first line;
+  rename and delete carry notes along with the save files
+- Known limitation: notes don't yet follow a window moved with
+  `C-w`/`C-y`/`C-p` — they stay keyed to the source session
+  (integration planned; see `CLAUDE.md` feature plan)
+
+**Use case:** Jot "waiting on CI for PR #142, then rebase" in the window
+where that's happening. Two weeks later, the note — not your memory —
+tells you where you left off.
+
 ## See also
 
 `tmux-attic` is a pure tmux session curator. Anything agent-aware
@@ -121,6 +142,11 @@ set -g @session-manager-rename-key 'C-n'
 # set -g @session-manager-load-window-key       'C-y'
 # set -g @session-manager-load-window-copy-key  'M-y'
 # set -g @session-manager-pull-window-key       'C-p'
+
+# Scratchpad notes — defaults shown
+# set -g @session-manager-scratchpad-key        'a'
+# set -g @session-manager-scratchpad-pane-key   'A'
+# set -g @session-manager-scratchpad-editor     ''   # empty = use $EDITOR
 ```
 
 ## Commands Summary
@@ -135,6 +161,8 @@ set -g @session-manager-rename-key 'C-n'
 | `C-w`  | Move Window    | Push current window → another session (running or saved)       |
 | `C-y`  | Load Window    | Pull a window from a saved session into the current one        |
 | `C-p`  | Pull Window    | Pull a window from anywhere (running or saved)                 |
+| `a`    | Scratchpad     | Persistent per-window note in `$EDITOR` (popup; `C-q` closes)  |
+| `A`    | Scratchpad     | Same, scoped to the current pane                               |
 
 Reload tmux: `tmux source ~/.tmux.conf` and press `prefix + I` to
 install.
@@ -234,6 +262,11 @@ You can customize the plugin by setting the following options in your `.tmux.con
 | `session-manager-load-window-copy-key-root`| Any key binding       | Not set                         | Which key binding to set in root table for loading a window with copy semantics. Using `prefix` is **not** necessary.   |
 | `session-manager-pull-window-key`          | Any key binding       | `C-p`                           | Which key binding to set for pulling a window from any session (running or saved).                                      |
 | `session-manager-pull-window-key-root`     | Any key binding       | Not set                         | Which key binding to set in root table for pulling a window. Using `prefix` is **not** necessary.                       |
+| `session-manager-scratchpad-key`           | Any key binding       | `a`                             | Which key binding to set for the per-window scratchpad note (popup in `$EDITOR`; `C-q` detaches, quit closes).          |
+| `session-manager-scratchpad-key-root`      | Any key binding       | Not set                         | Which key binding to set in root table for the window scratchpad. Using `prefix` is **not** necessary.                  |
+| `session-manager-scratchpad-pane-key`      | Any key binding       | `A`                             | Which key binding to set for the per-pane scratchpad note.                                                              |
+| `session-manager-scratchpad-pane-key-root` | Any key binding       | Not set                         | Which key binding to set in root table for the pane scratchpad. Using `prefix` is **not** necessary.                    |
+| `session-manager-scratchpad-editor`        | Any editor command    | Not set (uses `$EDITOR`)        | Editor used for scratchpad notes. Falls back to `$EDITOR`, then `vi`.                                                   |
 | `session-manager-disable-nixos-nvim-check` | `on` or `off`         | `off`                           | When `on`, disable the check for Neovim on NixOS.                                                                       |
 | `session-manager-disable-fzf-warning`      | `on` or `off`         | `off`                           | When `on`, disable the check for fzf on startup.                                                                        |
 

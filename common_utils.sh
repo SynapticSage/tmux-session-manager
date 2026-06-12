@@ -101,6 +101,28 @@ render_session_preview() {
 			}
 		}
 	' "$save_file"
+	render_notes_summary "$save_file"
+}
+
+# One line per scratchpad note for the session a save file belongs to:
+# note key + first content line (skipping the seeded "# ..." heading).
+# Notes live in $SAVE_DIR/notes/<session>/ (see scratchpad.sh).
+# Usage: render_notes_summary "/path/to/session_last"
+render_notes_summary() {
+	local base notes_dir note first
+	base=$(basename "$1")
+	base=${base%_last_archived}
+	base=${base%_last}
+	base=$(echo "$base" | sed -E 's/_[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}$//')
+	notes_dir="$SAVE_DIR/notes/$base"
+	[[ -d "$notes_dir" ]] || return 0
+	local header_printed=""
+	for note in "$notes_dir"/*.md; do
+		[[ -f "$note" ]] || continue
+		[[ -z "$header_printed" ]] && { printf '\n  Notes:\n'; header_printed=1; }
+		first=$(awk 'NR==1 && /^# / {next} NF {print; exit}' "$note")
+		printf '    %-22s %.60s\n' "$(basename "$note" .md)" "${first:-"(empty)"}"
+	done
 }
 
 # Open selection for list of sessions

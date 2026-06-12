@@ -28,6 +28,11 @@ done
 for f in "$SAVE_DIR/${session_name}"_[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9]; do
 	[[ -e "$f" ]] && victims+=("$f")
 done
+# Scratchpad notes (see scratchpad.sh) belong to the session too.
+notes_dir="$SAVE_DIR/notes/${session_name}"
+for f in "$notes_dir"/*; do
+	[[ -e "$f" ]] && victims+=("$f")
+done
 
 if [[ ${#victims[@]} -eq 0 ]]; then
 	tmux display-message "No saved files found for session '$session_name'"
@@ -46,6 +51,7 @@ case "$response" in
 	[yY]|[yY][eE][sS])
 		start_spinner "Deleting session"
 		rm -f -- "${victims[@]}"
+		rmdir -- "$notes_dir" 2>/dev/null
 		stop_spinner "Session '$session_name' deleted"
 		;;
 	*)

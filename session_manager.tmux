@@ -110,6 +110,29 @@ for key in $bindings; do
 	tmux bind-key -n "$key" run-shell "tmux display-popup -E '$(pwd)/load_window.sh --copy'"
 done
 
+# Scratchpad (persistent per-window / per-pane notes in $EDITOR)
+# C-q inside the popup detaches it; the editor keeps running for instant
+# re-open. Unbound keys in the "scratchpad" table fall through to the pane.
+tmux bind-key -T scratchpad C-q detach-client
+bindings=$(get_tmux_option "@session-manager-scratchpad-key" "a")
+for key in $bindings; do
+	tmux bind-key "$key" run-shell "$(pwd)/scratchpad.sh window"
+done
+bindings=$(get_tmux_option "@session-manager-scratchpad-key-root" "")
+for key in $bindings; do
+	tmux bind-key -n "$key" run-shell "$(pwd)/scratchpad.sh window"
+done
+
+# Scratchpad, pane scope (uppercase variant of the window key)
+bindings=$(get_tmux_option "@session-manager-scratchpad-pane-key" "A")
+for key in $bindings; do
+	tmux bind-key "$key" run-shell "$(pwd)/scratchpad.sh pane"
+done
+bindings=$(get_tmux_option "@session-manager-scratchpad-pane-key-root" "")
+for key in $bindings; do
+	tmux bind-key -n "$key" run-shell "$(pwd)/scratchpad.sh pane"
+done
+
 # Pull Window (from any session - running or saved)
 bindings=$(get_tmux_option "@session-manager-pull-window-key" "C-p")
 for key in $bindings; do

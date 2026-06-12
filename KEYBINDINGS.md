@@ -29,6 +29,16 @@ pane layouts — to disk under `~/.local/share/tmux/sessions/`.
 - **`Prefix + C-y`** — Load a window from a saved session into the
   current session (move semantics)
 - **`Prefix + C-p`** — Pull a window from any session (running or saved)
+- **`Prefix + a`** — Scratchpad note for the current **window**, opened
+  in `$EDITOR` inside a popup. **`C-q`** detaches the popup (editor keeps
+  running in the background — reopening is instant); quitting the editor
+  closes it fully. Notes persist as markdown under
+  `<save-dir>/notes/<session>/`, keyed by window index, so they
+  re-associate after a save/restore cycle. The latest save's preview
+  (`C-v` / `C-d` / `C-n`) shows each note's first line.
+- **`Prefix + A`** — Same, scoped to the current **pane**
+  (`window_<w>_pane_<p>.md`). Use sparingly — pane indexes are less
+  stable than window indexes.
 
 Configurable (not bound by default):
 
@@ -36,6 +46,10 @@ Configurable (not bound by default):
 - `@session-manager-unarchive-key` — restore from archive
 - `@session-manager-load-window-copy-key` — load window with copy
   semantics (keeps original in saved session)
+- `@session-manager-scratchpad-key` / `@session-manager-scratchpad-pane-key`
+  — override the `a` / `A` scratchpad defaults
+- `@session-manager-scratchpad-editor` — force a specific editor for
+  scratchpad notes (default: `$EDITOR`, falling back to `vi`)
 - `*-root` variants of each — bind without requiring the prefix
 
 ---

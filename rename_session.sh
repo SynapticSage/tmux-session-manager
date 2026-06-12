@@ -71,6 +71,7 @@ conflicts=()
 for f in "$SAVE_DIR/${new_name}"_[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9]; do
 	[[ -e "$f" ]] && conflicts+=("$(basename "$f")")
 done
+[[ -e "$SAVE_DIR/notes/${new_name}" ]] && conflicts+=("notes/${new_name}")
 
 if [[ ${#conflicts[@]} -gt 0 ]]; then
 	echo
@@ -108,6 +109,9 @@ for f in "${files[@]}"; do
 	new_paths+=("$SAVE_DIR/$new_base")
 	printf '  %s  ->  %s\n' "$old_base" "$new_base"
 done
+if [[ -d "$SAVE_DIR/notes/$old_name" ]]; then
+	printf '  notes/%s/  ->  notes/%s/\n' "$old_name" "$new_name"
+fi
 echo
 read -r -p "Proceed? [y/N] " response
 
@@ -134,6 +138,10 @@ case "$response" in
 			rm -- "${old_paths[$i]}"
 			ln -s -- "$new_target" "${new_paths[$i]}"
 		done
+		# Scratchpad notes are keyed by session name; move them along.
+		if [[ -d "$SAVE_DIR/notes/$old_name" ]]; then
+			mv -- "$SAVE_DIR/notes/$old_name" "$SAVE_DIR/notes/$new_name"
+		fi
 		stop_spinner "Session renamed: $old_name -> $new_name"
 		;;
 	*)

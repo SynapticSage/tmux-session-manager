@@ -134,8 +134,10 @@ $OPTS_BEGIN
 set -g @session-manager-view-key   'C-v'
 set -g @session-manager-delete-key 'C-d'
 set -g @session-manager-rename-key 'C-n'
-# Window-level defaults (C-w move, C-y load, C-p pull) are applied by the
-# plugin automatically — override here if desired.
+# Window-level defaults (C-w move, C-y load, C-p pull) and scratchpad
+# defaults (a window-note, A pane-note, C-q to detach the popup) are
+# applied by the plugin automatically — override here if desired.
+# set -g @session-manager-scratchpad-editor ''   # empty = use \$EDITOR
 $OPTS_END
 EOF
 )"
@@ -224,6 +226,11 @@ smoke_test() {
     log "  ✓ session-manager keybindings present"
   else
     log "  ~ session-manager keybindings not visible (may bind on first prefix press)"
+  fi
+  if tmux list-keys -T scratchpad 2>/dev/null | grep -q detach-client; then
+    log "  ✓ scratchpad key table registered (C-q detaches note popup)"
+  else
+    log "  ✗ scratchpad key table missing (run-shell may not have fired)"
   fi
 }
 
